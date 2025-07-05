@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+
+# Script to run text_to_snippet.py with an input text file
+# Usage: text_to_snippet.sh <input_file>
+
+# Check if an argument is provided
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <input_file>" >&2
+    echo "Example: $0 myfile.txt" >&2
+    exit 1
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Path to the Python script
+PYTHON_SCRIPT="$SCRIPT_DIR/text2snippet.py"
+
+# Check if the Python script exists
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "Error: text2snippet.py not found in $SCRIPT_DIR" >&2
+    exit 1
+fi
+
+# Check if the input file exists
+if [ ! -f "$1" ]; then
+    echo "Error: Input file '$1' not found" >&2
+    exit 1
+fi
+
+# Run the Python script with the provided input file
+python3 "$PYTHON_SCRIPT" "$1"
