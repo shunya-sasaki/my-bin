@@ -4,9 +4,17 @@ This repository contains various scripts that I use frequently.
 
 ## Setup
 
-```sh
+1. Clone the repository to your home directory:
 
-```
+   ```sh
+   git clone https://github.com/shunya-sasaki/my-bin.git ~/.bin
+   ```
+
+2. Add the following line to your shell configuration file (e.g., `~/.bashrc`, `~/.zshrc`).
+
+   ```sh
+   export PATH="$HOME/.bin:$PATH"
+   ```
 
 ## License
 
