@@ -1,0 +1,21 @@
+#!/bin/zsh
+
+args=("$@")
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Verify that can run uv command or python3 command
+if command -v uv &> /dev/null; then
+    echo "Using uv to run the script"
+    uv run "$SCRIPT_DIR/sync_snippets.py" "${args[@]}"
+else
+    if command -v python3 &> /dev/null; then
+        echo "Using python3 to run the script"
+        python3 "$SCRIPT_DIR/sync_snippets.py" "${args[@]}"
+    else
+        echo "Error: Neither uv nor python3 is available." >&2
+        exit 1
+    fi
+fi
+
