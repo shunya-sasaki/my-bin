@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 
-def create_snippet(file_path: str, snippet_name: str) -> dict[str, dict[str, str | list[str]]]:
+def create_snippet(
+    file_path: str, snippet_name: str
+) -> dict[str, dict[str, str | list[str]]]:
     """
     Reads the content of a file and creates a VSCode snippet.
 
@@ -24,12 +26,12 @@ def create_snippet(file_path: str, snippet_name: str) -> dict[str, dict[str, str
         print(f"Error: File not found at {file_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Strip trailing newline characters
     body = [line.rstrip("\n") for line in body]
 
     snippet = {
         snippet_name: {
             "prefix": snippet_name,
+            "scope": "",
             "description": f"Snippet for {snippet_name}",
             "body": body,
         }

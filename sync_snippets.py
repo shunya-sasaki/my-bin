@@ -1,12 +1,28 @@
 """Sync snippets between VS Code and Neovim."""
 
 import json
+import logging
 import platform
 import re
 import shutil
+from argparse import ArgumentParser
 from dataclasses import dataclass
+from logging import Formatter, Logger, StreamHandler
 from pathlib import Path
 from typing import TypedDict
+
+parser = ArgumentParser(description="Sync snippets between VS Code and Neovim.")
+parser.add_argument("--force-vscode", "-v", action="store_true")
+
+logger = Logger(__name__)
+logger.setLevel(logging.DEBUG)
+fmt = "[%(asctime)s.%(msecs)03d] %(levelname)-8s" + ": %(message)s"
+datefmt = r"%Y-%m-%d %H:%M:%S"
+formatter = Formatter(fmt=fmt, datefmt=datefmt)
+handler = StreamHandler()
+handler.setFormatter(formatter)
+handler.setLevel(logging.DEBUG)
+logger.addHandler(handler)
 
 
 class SnippetDict(TypedDict):
@@ -107,6 +123,18 @@ class SnippetsSync:
                 for line in lines:
                     is_invalid = re.match(r"^\s+//[\s]+", line)
                     if not is_invalid:
+                        match = re.search(r'"scope":\s*"([^"]+)"', line)
+                        if match:
+                            scopes_str = match.group(1)
+                            scopes = [
+                                self._convert_scope_from_vscode_to_nvim(scope.strip())
+                                for scope in scopes_str.split(",")
+                            ]
+                            line = re.sub(
+                                r'"scope":\s*"[^"]+"',
+                                f'"scope": "{",".join(scopes)}"',
+                                line,
+                            )
                         valid_lines.append(line)
                 with open(
                     self.nvim_dirpath / "snippets" / snippets_file.name,
@@ -114,6 +142,7 @@ class SnippetsSync:
                     encoding="utf-8",
                 ) as fout:
                     fout.writelines("".join(valid_lines))
+                logger.info(f"Copied {snippets_file.name} from nvim to vscode.")
 
     def nvim_to_vscode(self):
         """Copy snippets files that are not in vscode"""
@@ -124,6 +153,7 @@ class SnippetsSync:
                     self.vscode_dirpath / "snippets" / snippets_file.name
                 )
                 shutil.copy2(nvim_snippets_path, vscode_snippets_path)
+                logger.info(f"Copied {nvim_snippets_path.name} from nvim to vscode.")
 
     def create_package_json(self):
         """Create package.json for Neovim snippets."""
@@ -135,19 +165,23 @@ class SnippetsSync:
                 with open(snippets_filepath, "r", encoding="utf-8") as fin:
                     snippets_json: dict[str, SnippetDict] = json.load(fin)
             except json.decoder.JSONDecodeError:
-                print(f"[ERROR] {snippets_filepath.name}")
-                print(f"[ERROR] {snippets_filepath.as_posix()}")
+                logger.error(f"{snippets_filepath.name}")
+                logger.error(f"{snippets_filepath.as_posix()}")
                 raise
             except UnicodeDecodeError:
-                print(f"[ERROR] {snippets_filepath.name}")
+                logger.error(f"{snippets_filepath.name}")
                 raise
             for snippet in snippets_json.values():
                 snippet_scopes = snippet.get("scope", "").split(",")
+                snippet_scopes = [
+                    self._convert_scope_from_vscode_to_nvim(scope.strip())
+                    for scope in snippet_scopes
+                ]
                 scopes += snippet_scopes
             language = ",".join(set(scopes)).replace(" ", "")
+            if language == "":
+                language = "all"
             path = f"./{snippets_filepath.name}"
-            print(f"{path}")
-            print(f"  {language}")
             snippet = {"language": language, "path": path}
             snippets.append(snippet)
         dict_package = {"name": "nvim-snippets", "contributes": {"snippets": snippets}}
@@ -156,9 +190,56 @@ class SnippetsSync:
         ) as fout:
             json.dump(dict_package, fout, indent=2, ensure_ascii=False)
 
+    def _convert_scope_from_vscode_to_nvim(self, scope: str) -> str:
+        """Convert VS Code scope to Neovim scope."""
+        match scope:
+            case "plaintext":
+                return "text"
+            case "bat":
+                return "dosbatch"
+            case "powershell":
+                return "ps1"
+            case "ignore":
+                return "gitignore"
+            case "shellscript":
+                return "sh,zsh"
+            case "pip-requirements":
+                return "requirements"
+            case _:
+                return scope
+
+    def _convert_scope_from_nvim_to_vscode(self, scope: str) -> str:
+        """Convert Neovim scope to VS Code scope."""
+        match scope:
+            case "text":
+                return "plaintext"
+            case "dosbatch":
+                return "bat"
+            case "ps1":
+                return "powershell"
+            case "gitignore":
+                return "ignore"
+            case "sh":
+                return "shellscript"
+            case "zsh":
+                return "shellscript"
+            case "bash":
+                return "shellscript"
+            case "requirements":
+                return "pip-requirements"
+            case _:
+                return scope
+
 
 if __name__ == "__main__":
+    logger.info("Starting snippets sync...")
+    args = parser.parse_args()
+    if args.force_vscode:
+        logger.warning(
+            "Force copy from VS Code to Neovim is enabled."
+            + " This will overwrite existing files in Neovim."
+        )
     syncer = SnippetsSync()
     syncer.nvim_to_vscode()
-    syncer.vscode_to_nvim(force_copy=True)
+    syncer.vscode_to_nvim(force_copy=args.force_vscode)
     syncer.create_package_json()
