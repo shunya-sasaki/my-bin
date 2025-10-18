@@ -142,7 +142,7 @@ class SnippetsSync:
                     encoding="utf-8",
                 ) as fout:
                     fout.writelines("".join(valid_lines))
-                logger.info(f"Copied {snippets_file.name} from nvim to vscode.")
+                logger.info(f"Copied {snippets_file.name} from vscode to nvim.")
 
     def nvim_to_vscode(self):
         """Copy snippets files that are not in vscode"""
