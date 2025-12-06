@@ -40,7 +40,8 @@ $diff
 EOF
 )
 
-message=$(copilot -p "$prompt")
+# message=$(copilot -p "$prompt")
+message=$(gemini -p "$prompt")
 
 echo "$message" | pbcopy
 
