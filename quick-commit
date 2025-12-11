@@ -1,0 +1,17 @@
+#!/bin/bash
+
+CLIPBOARD_CONTENT=$(pbpaste)
+
+if [ -z "$CLIPBOARD_CONTENT" ]; then
+  echo "Error: Clipboard is empty. Please copy a commit message to the clipboard."
+  exit 1
+fi
+
+echo "Committing with message from clipboard:"
+echo ""
+echo "$CLIPBOARD_CONTENT"
+echo ""
+git commit -m "$CLIPBOARD_CONTENT"
+pbcopy < /dev/null
+echo ""
+echo "✅ Commit successful."
