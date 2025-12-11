@@ -8,6 +8,8 @@
 /.vscode
 /.venv
 /.env
+/src/
 /build
 /dist
 /sandbox
+/uv.lock
