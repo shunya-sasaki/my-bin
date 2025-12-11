@@ -2,7 +2,15 @@
 
 This repository contains various scripts that I use frequently.
 
-## Setup
+<!-- toc -->
+
+- [🛠️ Setup](#setup)
+- [📄 License](#license)
+- [👤 Author](#author)
+
+<!-- /toc -->
+
+## 🛠️ Setup
 
 1. Clone the repository to your home directory:
 
@@ -16,11 +24,11 @@ This repository contains various scripts that I use frequently.
    export PATH="$HOME/.bin:$PATH"
    ```
 
-## License
+## 📄 License
 
 [MIT License](./LICENSE)
 
-## Author
+## 👤 Author
 
 - Shunya Sasaki
   - Mail: [shunya.sasaki1120@gmail.com](mailto:shunya.sasaki1120@gmail.com)
