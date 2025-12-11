@@ -12,16 +12,17 @@ generate a concise and clear git commit message following the conventional commi
 - Create git commit messages based on the result of `git diff --cached`.
 - Use the conventional commit format, the commit message should be structured as follows:
 
-  '''
+  ~~~
   <type>[optional scope]: <description>
 
   [optional body]
 
   [optional footer(s)]
-  '''
+  ~~~
 
 - The first line is the commit title and should be concise.
 - The length of the first line must be at most 50 characters.
+- The description should start with lower letter.
 - The third line is optional and can provide additional context or details about the change.
 - The type in the first line must be one of the following:
   - build: Changes that affect the build system or external dependencies
@@ -33,6 +34,11 @@ generate a concise and clear git commit message following the conventional commi
   - refactor: A code change that neither fixes a bug nor adds a feature
   - style: Changes that do not affect the meaning of the code
   - test: Adding missing tests or correcting existing tests
+- The example is as follows:
+
+  ~~~
+  feat(zed): add setting files for Zed
+  ~~~
 
 ## Git diff
 
@@ -43,7 +49,9 @@ EOF
 # message=$(copilot -p "$prompt")
 message=$(gemini -p "$prompt")
 
+message=$(echo "$message" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^```//' -e 's/```$//')
+
 echo "$message" | pbcopy
 
 echo
-echo $message
+echo "$message"
