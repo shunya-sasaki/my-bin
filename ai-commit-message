@@ -15,16 +15,17 @@ azure_openai_commit_message() {
   local url="${AZURE_OPEN_AI_ENDPOINT}openai/deployments/${AZURE_OPEN_AI_DEPLOYMENT_ID}/chat/completions?api-version=${AZURE_OPEN_AI_API_VERSION}"
 
   local body
-  body=$(cat <<JSON
-{
-  "messages": [
-    { "role": "system", "content": "$sys_prompt" },
-    { "role": "user", "content": "Generate commit message base on the follows.\n$diff" }
-  ],
-  "stream": false
-}
-JSON
-)
+    body=$(jq -n \
+      --arg sys "$sys_prompt" \
+      --arg diff "$diff" \
+      '{
+        messages: [
+          { role: "system", content: $sys },
+          { role: "user", content: ("Generate commit message base on the follows.\n" + $diff) }
+        ],
+        stream: false
+      }'
+    )
 
   local resp
   resp="$(curl -sS -f -X POST "$url" \
