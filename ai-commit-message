@@ -1,9 +1,50 @@
-#!/bin/sh
+#!/bin/bash
+
+# Functions --------------------------------------------------------------------
+azure_openai_commit_message() {
+  local sys_prompt="$1"
+  local diff="$2"
+
+  for var in AZURE_OPEN_AI_ENDPOINT AZURE_OPEN_AI_DEPLOYMENT_ID AZURE_OPEN_AI_API_VERSION AZURE_OPEN_AI_API_KEY; do
+    if [ -z "${!var}" ]; then
+      echo "Error: $var is not set." >&2
+      return 1
+    fi
+  done
+
+  local url="${AZURE_OPEN_AI_ENDPOINT}openai/deployments/${AZURE_OPEN_AI_DEPLOYMENT_ID}/chat/completions?api-version=${AZURE_OPEN_AI_API_VERSION}"
+
+  local body
+  body=$(cat <<JSON
+{
+  "messages": [
+    { "role": "system", "content": "$sys_prompt" },
+    { "role": "user", "content": "Generate commit message base on the follows.\n$diff" }
+  ],
+  "stream": false
+}
+JSON
+)
+
+  local resp
+  resp="$(curl -sS -f -X POST "$url" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -H "Api-Key: $AZURE_OPEN_AI_API_KEY" \
+    -d "$body")" || {
+      echo "Error: request to Azure OpenAI failed." >&2
+      return 1
+    }
+
+  echo "$(echo "$resp" | jq -r '.choices[0].message.content')"
+}
+
+# Main proces -----------------------------------------------------------------
 
 diff=$(git --no-pager diff --cached --no-color)
 
 
-prompt=$(cat <<EOF
+sys_prompt=$(cat <<EOF
 You are an expert git commit message generator. Based on the provided git diff,
 generate a concise and clear git commit message following the conventional commit format.
 
@@ -23,6 +64,7 @@ generate a concise and clear git commit message following the conventional commi
 - The first line is the commit title and should be concise.
 - The length of the first line must be at most 50 characters.
 - The description should start with lower letter.
+- The all message should be written in English.
 - The third line is optional and can provide additional context or details about the change.
 - The type in the first line must be one of the following:
   - build: Changes that affect the build system or external dependencies
@@ -42,16 +84,37 @@ generate a concise and clear git commit message following the conventional commi
 
 ## Git diff
 
-$diff
 EOF
 )
 
-# message=$(copilot -p "$prompt")
-message=$(gemini -p "$prompt")
+prompt="${sys_prompt}$diff"
+
+if [ -z "${AI_COMMIT_MESSAGE_PROVIDER+x}" ]; then
+    message=$(gemini -p "$prompt")
+else
+    if [ "$AI_COMMIT_MESSAGE_PROVIDER" = "GEMINI" ] || [ "$AI_COMMIT_MESSAGE_PROVIDER" = "gemini" ]; then
+        message=$(gemini -p "$prompt")
+    elif [ "$AI_COMMIT_MESSAGE_PROVIDER" = "COPILOT" ] || [ "$AI_COMMIT_MESSAGE_PROVIDER" = "copilot" ]; then
+        message=$(copilot -p "$prompt")
+    elif [ "$AI_COMMIT_MESSAGE_PROVIDER" = "AZURE_OPEN_AI" ]; then
+        message=$(azure_openai_commit_message "$sys_prompt" "$diff")
+    else
+        message=$(gemini -p "$prompt")
+    fi
+fi
+
 
 message=$(echo "$message" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^```//' -e 's/```$//')
 
-echo "$message" | pbcopy
-
+if [ -z "${AI_COMMIT_MESSAGE_USE_TMP+x}" ]; then
+    echo "$message" | pbcopy
+else
+    tmp_dir="${HOME}/.tmp"
+    if [[ ! -d "$tmp_dir" ]]; then
+        mkdir -p "$tmp_dir"
+    fi
+    tmp_file="${tmp_dir}/commit-message.txt"
+    echo "$message" > "$tmp_file"
+fi
 echo
 echo "$message"
