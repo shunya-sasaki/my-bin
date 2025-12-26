@@ -1,6 +1,10 @@
 #!/bin/bash
 
-CLIPBOARD_CONTENT=$(pbpaste)
+if [ -z "$AI_COMMIT_MESSAGE_USE_TMP" ]; then
+    CLIPBOARD_CONTENT=$(pbpaste)
+else
+    CLIPBOARD_CONTENT=$(cat "${HOME}/.tmp/commit-message.txt")
+fi
 
 if [ -z "$CLIPBOARD_CONTENT" ]; then
   echo "Error: Clipboard is empty. Please copy a commit message to the clipboard."
@@ -12,6 +16,11 @@ echo ""
 echo "$CLIPBOARD_CONTENT"
 echo ""
 git commit -m "$CLIPBOARD_CONTENT"
-pbcopy < /dev/null
+
+if [ -z "$AI_COMMIT_MESSAGE_USE_TMP" ]; then
+    pbcopy < /dev/null
+else
+    rm "${HOME}/.tmp/commit-message.txt"
+fi
 echo ""
 echo "✅ Commit successful."
